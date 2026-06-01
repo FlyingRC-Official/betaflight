@@ -42,17 +42,20 @@
 // Use a conservative clock until the target board has been verified at the device maximum.
 #define QMI8658_MAX_SPI_CLK_HZ 10000000
 
+#ifndef QMI8658_USE_EXTI
+#define QMI8658_USE_EXTI 0
+#endif
+
+#if QMI8658_USE_EXTI
 // Need to see at least this many interrupts during initialisation to confirm EXTI connectivity.
 #define GYRO_EXTI_DETECT_THRESHOLD 1000
-
-#define QMI8658_CTRL1_ADDR_AI             (1 << 6)
-#define QMI8658_CTRL1_INT1_ENABLE         (1 << 3)
-#define QMI8658_CTRL1_INT2_ENABLE         (1 << 4)
-
-// Override from a target if the board wires data-ready to INT2 instead of INT1.
-#ifndef QMI8658_CTRL1_INT_CONFIG
-#define QMI8658_CTRL1_INT_CONFIG          QMI8658_CTRL1_INT1_ENABLE
 #endif
+
+// CTRL1 controls the QMI8658 serial interface and interrupt routing.
+// Use the known-good 4-wire SPI + address auto-increment configuration.
+// A partial CTRL1 value can leave the part readable only after a cold power-on,
+// then not detectable after a Betaflight software reboot/save.
+#define QMI8658_CTRL1_SPI_4WIRE_AUTO_INC  0x76
 
 #define QMI8658_CTRL2_ACC_FS_16G          (0x03 << 4)
 #define QMI8658_CTRL2_ACC_ODR_896HZ       0x03
@@ -124,9 +127,7 @@ static void qmi8658Config(gyroDev_t *gyro)
 
     qmi8658RegisterWrite(dev, QMI8658_REG_RESET, QMI8658_RESET_CMD, 20);
 
-    qmi8658RegisterWrite(dev, QMI8658_REG_CTRL1,
-        QMI8658_CTRL1_ADDR_AI | QMI8658_CTRL1_INT_CONFIG,
-        1);
+    qmi8658RegisterWrite(dev, QMI8658_REG_CTRL1, QMI8658_CTRL1_SPI_4WIRE_AUTO_INC, 1);
 
     qmi8658RegisterWrite(dev, QMI8658_REG_CTRL7, 0x00, 1);
 
@@ -149,6 +150,8 @@ static void qmi8658Config(gyroDev_t *gyro)
         QMI8658_CTRL7_GYRO_ENABLE | QMI8658_CTRL7_ACC_ENABLE,
         150);
 }
+
+#if QMI8658_USE_EXTI
 
 #ifdef USE_DMA
 static busStatus_e qmi8658IntCallback(uintptr_t arg)
@@ -195,6 +198,8 @@ static void qmi8658IntExtiInit(gyroDev_t *gyro)
     EXTIEnable(mpuIntIO);
 }
 
+#endif
+
 static bool qmi8658AccRead(accDev_t *acc)
 {
     extDevice_t *dev = &acc->gyro->dev;
@@ -239,28 +244,10 @@ static bool qmi8658GyroRead(gyroDev_t *gyro)
     switch (gyro->gyroModeSPI) {
     case GYRO_EXTI_INIT:
     {
+        // Bring-up mode: force register polling first. Once raw data is confirmed,
+        // EXTI/DMA can be re-enabled and tuned separately.
         memset(dev->txBuf, 0x00, 14);
-        gyro->gyroDmaMaxDuration = 5;
-
-        if (gyro->detectedEXTI > GYRO_EXTI_DETECT_THRESHOLD) {
-#ifdef USE_DMA
-            if (spiUseDMA(dev)) {
-                dev->callbackArg = (uintptr_t)gyro;
-                dev->txBuf[0] = QMI8658_REG_AX_L | 0x80;
-                gyro->segments[0].len = 13;
-                gyro->segments[0].callback = qmi8658IntCallback;
-                gyro->segments[0].u.buffers.txData = dev->txBuf;
-                gyro->segments[0].u.buffers.rxData = dev->rxBuf;
-                gyro->segments[0].negateCS = true;
-                gyro->gyroModeSPI = GYRO_EXTI_INT_DMA;
-            } else
-#endif
-            {
-                gyro->gyroModeSPI = GYRO_EXTI_INT;
-            }
-        } else {
-            gyro->gyroModeSPI = GYRO_EXTI_NO_INT;
-        }
+        gyro->gyroModeSPI = GYRO_EXTI_NO_INT;
         break;
     }
 
@@ -311,7 +298,11 @@ static void qmi8658SpiGyroInit(gyroDev_t *gyro)
     gyro->dmaReadRegStart = QMI8658_REG_AX_L;
 
     qmi8658Config(gyro);
+    // Do not enable EXTI during initial QMI8658 bring-up. The driver polls the
+    // data registers so we can verify the read/parse path independent of INT wiring.
+#if QMI8658_USE_EXTI
     qmi8658IntExtiInit(gyro);
+#endif
 
     spiSetClkDivisor(dev, spiCalculateDivider(QMI8658_MAX_SPI_CLK_HZ));
 }
