@@ -39,6 +39,7 @@
 #endif
 
 #define GYRO_SCALE_2000DPS (2000.0f / (1 << 15))   // 16.384 dps/lsb scalefactor for 2000dps sensors
+#define GYRO_SCALE_2048DPS (2048.0f / (1 << 15))   // 16.0 dps/lsb scalefactor for 2048dps sensors
 #define GYRO_SCALE_4000DPS (4000.0f / (1 << 15))   //  8.192 dps/lsb scalefactor for 4000dps sensors
 
 // Gyro hardware types were updated in PR #14087 (removed GYRO_L3G4200D, GYRO_MPU3050)
@@ -69,6 +70,7 @@ typedef enum {
     GYRO_LSM6DSK320X,
     GYRO_ICM42622P,
     GYRO_ICM42686P,
+    GYRO_QMI8658,
     GYRO_VIRTUAL,
     GYRO_HARDWARE_COUNT
 } gyroHardware_e;
@@ -89,6 +91,7 @@ typedef enum {
     GYRO_RATE_3200_Hz,
     GYRO_RATE_6400_Hz,
     GYRO_RATE_6664_Hz,
+    GYRO_RATE_7174_Hz,
     GYRO_RATE_8_kHz,
     GYRO_RATE_9_kHz,
     GYRO_RATE_32_kHz,

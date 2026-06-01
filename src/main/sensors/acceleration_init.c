@@ -56,6 +56,7 @@
 #include "drivers/accgyro/accgyro_spi_mpu6000.h"
 #include "drivers/accgyro/accgyro_spi_mpu6500.h"
 #include "drivers/accgyro/accgyro_spi_mpu9250.h"
+#include "drivers/accgyro/accgyro_spi_qmi8658.h"
 
 #include "config/config.h"
 
@@ -287,6 +288,15 @@ retry:
     case ACC_BMI270:
         if (bmi270SpiAccDetect(dev)) {
             accHardware = ACC_BMI270;
+            break;
+        }
+        FALLTHROUGH;
+#endif
+
+#ifdef USE_ACCGYRO_QMI8658
+    case ACC_QMI8658:
+        if (qmi8658SpiAccDetect(dev)) {
+            accHardware = ACC_QMI8658;
             break;
         }
         FALLTHROUGH;

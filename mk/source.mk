@@ -322,6 +322,7 @@ COMMON_SRC += \
             drivers/accgyro/accgyro_spi_mpu6000.c \
             drivers/accgyro/accgyro_spi_mpu6500.c \
             drivers/accgyro/accgyro_spi_mpu9250.c \
+            drivers/accgyro/accgyro_spi_qmi8658.c \
             drivers/accgyro/accgyro_virtual.c \
             BoschSensortec/BMI270-Sensor-API/bmi270_maximum_fifo.c \
             drivers/barometer/barometer_2smpb_02b.c \
@@ -428,6 +429,7 @@ SPEED_OPTIMISED_SRC += \
             drivers/accgyro/accgyro_mpu.c \
             drivers/accgyro/accgyro_spi_bmi160.c \
             drivers/accgyro/accgyro_spi_bmi270.c \
+            drivers/accgyro/accgyro_spi_qmi8658.c \
             drivers/accgyro/accgyro_spi_lsm6dso.c
 
 endif
